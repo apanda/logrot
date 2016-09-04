@@ -5,13 +5,22 @@ import sys
 import concurrent.futures
 
 output = []
+@asyncio.coroutine
+def wait_heat_death(proc, loop):
+    print("Wating for heat death of the universe")
+    yield from proc.wait()
+    print("Process died, killing myself?")
+    loop.stop()
 
 @asyncio.coroutine
-def runner(*args):
+def runner(*args, loop=None):
     """Function to run a subprocess and wait for input on a pipe"""
     global output
     proc = yield from asyncio.create_subprocess_exec(*args, stdout=PIPE)
     print("Started process pid:%s"%proc.pid)
+    if loop:
+        asyncio.ensure_future(wait_heat_death(proc, loop))
+
     while True:
         try:
             # Wait to read a line from the process
@@ -44,7 +53,7 @@ def printer(array):
 
 try:
     loop = asyncio.get_event_loop()
-    asyncio.ensure_future(runner(*sys.argv[1:])) # Get the process bit running
+    asyncio.ensure_future(runner(*sys.argv[1:], loop=loop)) # Get the process bit running
     asyncio.ensure_future(main_loop())
     loop.run_forever()
 finally:
